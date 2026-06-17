@@ -39,7 +39,7 @@
 - **Next.js(App Router)**:前後端一體,`pnpm dev` 即起;route handlers 提供 API 與 SSE。
 - React + 一個圖表庫(summary 視覺化)。
 - **SQLite(`better-sqlite3`)**,走 repository 介面(可換 Postgres)。
-- OpenRouter:用 `openai` SDK 指向 OpenRouter base URL(最穩;不採用未證實的專屬 SDK)。tool calling 用 `tools`;測資生成用 structured output(`response_format: json_schema`)。
+- OpenRouter:以 `fetch` 直打 OpenAI 相容端點(`/api/v1/chat/completions`,`Authorization: Bearer`)。比包 `openai` SDK 更易以 MSW 測試、且回傳原始 shape(不採用未證實的專屬 SDK)。tool calling 用 `tools`;測資生成用 structured output(`response_format: json_schema`)。
 - **`core/` 不 import 任何 Next 相依** → 可獨立單測、日後可抽成獨立服務。
 
 ## 4. 架構
@@ -99,7 +99,7 @@ Summary(對一個 Run rollup): 分數分布、一致性指標、異常筆、成�
 ### 資料表(SQLite)
 - `suites(id, owner_id, name, type, target_config, judge_config, run_config, created_at)`
 - `datasets(id, owner_id, name, source, gen_spec, created_at)`
-- `test_cases(id, dataset_id, vars, expected, created_at)`
+- `test_cases(id, dataset_id, vars, expected)`
 - `runs(id, owner_id, suite_id, dataset_id, status, n_repeats, started_at, finished_at, error)`
 - `results(id, run_id, test_case_id, repeat_index, status, output_text, tool_calls, judge_verdict, metrics, usage, error, created_at)`
 
