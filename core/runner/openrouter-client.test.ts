@@ -10,7 +10,7 @@ test('returns choice on 200', async () => {
     choices: [{ message: { content: 'hi' }, finish_reason: 'stop' }],
     usage: { prompt_tokens: 5, completion_tokens: 1 } })));
   const res = await client.chat({ model: 'm', messages: [{ role: 'user', content: 'x' }] });
-  expect(res.choices[0].message.content).toBe('hi');
+  expect(res.choices[0]?.message.content).toBe('hi');
 });
 
 test('retries on 429 then succeeds', async () => {
@@ -20,7 +20,7 @@ test('retries on 429 then succeeds', async () => {
       : HttpResponse.json({ choices: [{ message: { content: 'ok' }, finish_reason: 'stop' }], usage: {} });
   }));
   const res = await client.chat({ model: 'm', messages: [] });
-  expect(res.choices[0].message.content).toBe('ok');
+  expect(res.choices[0]?.message.content).toBe('ok');
   expect(n).toBe(2);
 });
 
@@ -51,5 +51,5 @@ test('retries on network error', async () => {
   server.use(http.post(URL, () => { n++; return n < 2 ? HttpResponse.error()
     : HttpResponse.json({ choices: [{ message: { content: 'ok' }, finish_reason: 'stop' }], usage: {} }); }));
   const res = await client.chat({ model: 'm', messages: [] });
-  expect(res.choices[0].message.content).toBe('ok');
+  expect(res.choices[0]?.message.content).toBe('ok');
 });
