@@ -46,3 +46,47 @@ test('insertResult + listResults preserves toolCalls + usage', () => {
   expect(got[0]?.toolCalls?.[0]?.name).toBe('get_weather');
   expect(got[0]?.usage).toEqual({ promptTokens: 10, completionTokens: 2 });
 });
+
+// Fix 3: absent optional fields on Result should round-trip as undefined, not null/"null"
+test('minimal error result: absent optional fields come back undefined', () => {
+  const r = repo();
+  r.createRun({ id: 'run2', ownerId: 'local', suiteId: 's1', datasetId: 'd1',
+    status: 'running', nRepeats: 1, startedAt: 1, finishedAt: null, error: null });
+  // Insert a minimal result: only required fields + error; no outputText/toolCalls/usage/judgeVerdict/metrics
+  r.insertResult({
+    id: 'res2', runId: 'run2', testCaseId: 'c1', repeatIndex: 0,
+    status: 'error', error: 'timeout', createdAt: 2,
+  });
+  const got = r.listResults('run2');
+  expect(got).toHaveLength(1);
+  const res = got[0]!;
+  // required fields preserved
+  expect(res.status).toBe('error');
+  expect(res.error).toBe('timeout');
+  // optional absent fields → undefined (NOT null or the string "null")
+  expect(res.outputText).toBeUndefined();
+  expect(res.toolCalls).toBeUndefined();
+  expect(res.usage).toBeUndefined();
+  expect(res.judgeVerdict).toBeUndefined();
+  expect(res.metrics).toBeUndefined();
+});
+
+// Fix 3: Dataset without genSpec round-trips with genSpec undefined
+test('dataset without genSpec round-trips genSpec as undefined', () => {
+  const r = repo();
+  r.createDataset(
+    { id: 'd2', ownerId: 'local', name: 'manual-ds', source: 'manual', createdAt: 5 },
+    []
+  );
+  const ds = r.getDataset('d2');
+  expect(ds).not.toBeNull();
+  expect(ds?.genSpec).toBeUndefined();
+});
+
+// Fix 3: Suite with judge: null still round-trips correctly
+test('suite with judge null round-trips judge as null', () => {
+  const r = repo();
+  const noJudge: Suite = { ...suite, id: 's-nojudge', judge: null };
+  r.createSuite(noJudge);
+  expect(r.getSuite('s-nojudge')?.judge).toBeNull();
+});

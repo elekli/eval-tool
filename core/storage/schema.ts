@@ -1,4 +1,6 @@
--- core/storage/schema.sql
+// Single source of truth for DDL — exported as a const so it survives any bundler
+// (Next.js / webpack do NOT bundle .sql assets; readFileSync(new URL(...)) breaks at runtime).
+export const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS suites (
   id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, name TEXT NOT NULL, type TEXT NOT NULL,
   target_config TEXT NOT NULL, judge_config TEXT, run_config TEXT NOT NULL, created_at INTEGER NOT NULL);
@@ -16,3 +18,4 @@ CREATE TABLE IF NOT EXISTS results (
   usage TEXT, error TEXT, created_at INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS idx_results_run ON results(run_id);
 CREATE INDEX IF NOT EXISTS idx_cases_dataset ON test_cases(dataset_id);
+`;

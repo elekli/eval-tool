@@ -1,7 +1,7 @@
-import { readFileSync } from 'node:fs';
 import type Database from 'better-sqlite3';
 import type { Repository } from './repository';
 import type { Suite, Dataset, TestCase, Run, Result, JudgeConfig, GenSpec } from '../types';
+import { SCHEMA_SQL } from './schema';
 
 // Row types matching the DB schema
 interface SuiteRow {
@@ -63,8 +63,7 @@ export class SQLiteRepo implements Repository {
 
   constructor(db: Database.Database) {
     this.db = db;
-    const ddl = readFileSync(new URL('./schema.sql', import.meta.url), 'utf8');
-    this.db.exec(ddl);
+    this.db.exec(SCHEMA_SQL);
   }
 
   // --- private row → domain helpers ---
@@ -88,7 +87,7 @@ export class SQLiteRepo implements Repository {
       ownerId: row.owner_id,
       name: row.name,
       source: row.source as Dataset['source'],
-      genSpec: row.gen_spec ? (JSON.parse(row.gen_spec) as GenSpec) : undefined,
+      genSpec: row.gen_spec !== null ? (JSON.parse(row.gen_spec) as GenSpec) : undefined,
       createdAt: row.created_at,
     };
   }
@@ -98,7 +97,7 @@ export class SQLiteRepo implements Repository {
       id: row.id,
       datasetId: row.dataset_id,
       vars: JSON.parse(row.vars) as Record<string, string>,
-      expected: row.expected ? (JSON.parse(row.expected) as TestCase['expected']) : undefined,
+      expected: row.expected !== null ? (JSON.parse(row.expected) as TestCase['expected']) : undefined,
     };
   }
 
@@ -124,10 +123,10 @@ export class SQLiteRepo implements Repository {
       repeatIndex: row.repeat_index,
       status: row.status as Result['status'],
       outputText: row.output_text ?? undefined,
-      toolCalls: row.tool_calls ? (JSON.parse(row.tool_calls) as Result['toolCalls']) : undefined,
-      judgeVerdict: row.judge_verdict ? (JSON.parse(row.judge_verdict) as Result['judgeVerdict']) : undefined,
-      metrics: row.metrics ? (JSON.parse(row.metrics) as Record<string, number>) : undefined,
-      usage: row.usage ? (JSON.parse(row.usage) as Result['usage']) : undefined,
+      toolCalls: row.tool_calls !== null ? (JSON.parse(row.tool_calls) as Result['toolCalls']) : undefined,
+      judgeVerdict: row.judge_verdict !== null ? (JSON.parse(row.judge_verdict) as Result['judgeVerdict']) : undefined,
+      metrics: row.metrics !== null ? (JSON.parse(row.metrics) as Record<string, number>) : undefined,
+      usage: row.usage !== null ? (JSON.parse(row.usage) as Result['usage']) : undefined,
       error: row.error ?? undefined,
       createdAt: row.created_at,
     };
@@ -191,7 +190,7 @@ export class SQLiteRepo implements Repository {
     const tx = this.db.transaction(() => {
       insertDataset.run(
         d.id, d.ownerId, d.name, d.source,
-        d.genSpec ? JSON.stringify(d.genSpec) : null,
+        d.genSpec !== undefined ? JSON.stringify(d.genSpec) : null,
         d.createdAt
       );
       for (const c of cases) {
