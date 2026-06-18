@@ -210,6 +210,11 @@ export class SQLiteRepo implements Repository {
     return row ? this.rowToDataset(row) : null;
   }
 
+  listDatasets(ownerId: string): Dataset[] {
+    const stmt = this.db.prepare<[string], DatasetRow>('SELECT * FROM datasets WHERE owner_id = ?');
+    return stmt.all(ownerId).map(r => this.rowToDataset(r));
+  }
+
   listTestCases(datasetId: string): TestCase[] {
     const stmt = this.db.prepare<[string], TestCaseRow>('SELECT * FROM test_cases WHERE dataset_id = ?');
     return stmt.all(datasetId).map(r => this.rowToTestCase(r));

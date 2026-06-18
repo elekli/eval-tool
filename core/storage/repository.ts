@@ -11,6 +11,7 @@ export interface Repository {
   // datasets + cases
   createDataset(d: Dataset, cases: TestCase[]): void;
   getDataset(id: string): Dataset | null;
+  listDatasets(ownerId: string): Dataset[];
   listTestCases(datasetId: string): TestCase[];
   // runs + results
   createRun(r: Run): void;
