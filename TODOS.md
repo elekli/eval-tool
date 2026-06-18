@@ -2,6 +2,7 @@
 
 ## Code refinements (deferred from review)
 
+- **judge.ts — ambiguous error when `choices` absent**(Chunk 4 review, Important-but-non-blocking):`core/judge/judge.ts` 在 `response.choices` 缺失/空陣列時,落入 `JudgeParseError('response had no content')`,訊息誤導(真因是 API 回應結構壞掉)。修法:在取 content 前加 `if (!response.choices?.length) throw new JudgeParseError('response missing choices array')`。不影響正確性,純診斷清晰度。
 - **tooluse-metrics — NaN on empty calls**(Chunk 3 review minor):`argumentSchemaConformanceRate`(及 `toolSelectionHitRate` 若同時給 `expectedTool`)在 `calls: []` 時是 `0/0 = NaN`。實務上呼叫層(job/summary)會擋空 calls,但 raw 函式有未文件化的 NaN surface。修法:空 calls 時回 `0` 或省略該欄位。順帶補測 `toolSchema` 無 `expectedTool` 的路徑、修正一處測試註解字串。
 - **OpenRouter client — malformed 2xx body is retried**(Chunk 2 code-quality minor):`core/runner/openrouter-client.ts` 在 200 回應但 `response.json()` 解析失敗時,落入泛用 catch 被歸類成 network error → 重試(對非冪等 LLM 呼叫重送)。罕見且最終會 loudly 失敗,非阻擋。修法:對 2xx-壞body 給一個具名的 `ParseError`(不重試),符合「every error has a name」。
 
