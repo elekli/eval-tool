@@ -90,6 +90,7 @@ export function SummaryDashboard({ summary, onCaseClick, activeCaseId }: Props) 
                   <>
                     <th style={thStyle}>Score (mean)</th>
                     <th style={thStyle}>Std Dev</th>
+                    <th style={thStyle}>Distinct</th>
                   </>
                 )}
                 {type === 'tool_use' && (
@@ -143,6 +144,9 @@ export function SummaryDashboard({ summary, onCaseClick, activeCaseId }: Props) 
                         <td style={tdStyle}>
                           {cs.scoreStd !== undefined ? cs.scoreStd.toFixed(2) : '—'}
                         </td>
+                        <td style={{ ...tdStyle, color: '#6b7280' }}>
+                          {cs.distinctOutputCount ?? '—'}
+                        </td>
                       </>
                     )}
                     {type === 'tool_use' && (
@@ -169,7 +173,7 @@ export function SummaryDashboard({ summary, onCaseClick, activeCaseId }: Props) 
 
               {cases.length === 0 && (
                 <tr>
-                  <td colSpan={type === 'tool_use' ? 7 : 6} style={{ ...tdStyle, color: '#9ca3af', textAlign: 'center', padding: 24, fontStyle: 'italic' }}>
+                  <td colSpan={7} style={{ ...tdStyle, color: '#9ca3af', textAlign: 'center', padding: 24, fontStyle: 'italic' }}>
                     No cases yet.
                   </td>
                 </tr>

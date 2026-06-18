@@ -1,4 +1,4 @@
-import type { EvalType, TestCase, Result } from '../types';
+import type { EvalType, TestCase, Result, VirtualToolDef } from '../types';
 import { scoreStats, distinctOutputs, toolUseMetrics } from '../metrics';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -43,6 +43,7 @@ export function computeSummary(
   type: EvalType,
   cases: TestCase[],
   results: Result[],
+  tools?: VirtualToolDef[],
 ): Summary {
   // Group results by testCaseId
   const byCase = new Map<string, Result[]>();
@@ -118,6 +119,7 @@ export function computeSummary(
       if (allCalls.length > 0) {
         const metrics = toolUseMetrics({
           expectedTool: testCase.expected?.tool,
+          tools,
           calls: allCalls,
         });
         toolSelectionEntropy = metrics.toolSelectionEntropy;

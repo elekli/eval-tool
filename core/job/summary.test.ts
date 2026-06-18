@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest';
 import { computeSummary } from './summary';
-import type { TestCase, Result } from '../types';
+import type { TestCase, Result, VirtualToolDef } from '../types';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -143,10 +143,51 @@ describe('computeSummary – tool_use type', () => {
     expect(c.toolSelectionEntropy).toBe(0);
     // Both hit expected tool → hitRate = 1.0
     expect(c.toolSelectionHitRate).toBe(1.0);
-    // No schema provided (no toolSchema) → conformanceRate = 0 (fail-closed)
-    // Note: conformanceRate is computed from toolUseMetrics without schema
+    // No tools[] passed → no schema resolvable → conformanceRate = 0 (fail-closed)
     expect(c.argumentSchemaConformanceRate).toBeDefined();
     expect(c.isOutlier).toBe(false); // entropy=0, not > 0.5
+  });
+
+  test('conformanceRate is non-zero when suite tools[] is passed and args are valid', () => {
+    // This test covers the critical wiring fix: suite.target.tools must reach
+    // toolUseMetrics so that per-call schema resolution works and the "Schema
+    // Conformance" UI metric is not always 0%.
+    const weatherSchema = {
+      type: 'object',
+      required: ['city'],
+      properties: { city: { type: 'string' } },
+    };
+    const tools: VirtualToolDef[] = [
+      { name: 'get_weather', description: 'Get weather', parameters: weatherSchema },
+    ];
+
+    const cases = [makeCase('c1', { query: 'weather in Tokyo' })];
+    cases[0]!.expected = { tool: 'get_weather' };
+
+    const results: Result[] = [
+      makeResult({
+        id: 'r1', testCaseId: 'c1', repeatIndex: 0,
+        toolCalls: [
+          { name: 'get_weather', argumentsRaw: '{"city":"Tokyo"}', argumentsParsed: { city: 'Tokyo' } },
+        ],
+      }),
+      makeResult({
+        id: 'r2', testCaseId: 'c1', repeatIndex: 1,
+        toolCalls: [
+          // Mixed: one valid get_weather + one call to unknown tool (no schema → non-conformant)
+          { name: 'get_weather', argumentsRaw: '{"city":"Osaka"}', argumentsParsed: { city: 'Osaka' } },
+          { name: 'search', argumentsRaw: '{}', argumentsParsed: {} },
+        ],
+      }),
+    ];
+
+    // Pass tools — conformance must be non-zero (2 of 3 total calls conform)
+    const summary = computeSummary('tool_use', cases, results, tools);
+    const c = summary.cases[0]!;
+    // 2 get_weather calls have valid args → conformant; 1 search call has no schema → not conformant
+    // Denominator is ALL calls (3) → rate = 2/3
+    expect(c.argumentSchemaConformanceRate).toBeCloseTo(2 / 3);
+    expect(c.argumentSchemaConformanceRate).toBeGreaterThan(0);
   });
 
   test('high-entropy tool_use case is flagged as outlier', () => {

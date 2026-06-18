@@ -17,7 +17,7 @@ export async function GET(
 
     const cases = container.repo.listTestCases(run.datasetId);
     const results = container.repo.listResults(id);
-    const summary = computeSummary(suite.type, cases, results);
+    const summary = computeSummary(suite.type, cases, results, suite.target.tools);
     return Response.json(summary);
   } catch (err) {
     return Response.json({ error: String(err) }, { status: 500 });

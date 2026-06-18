@@ -1,18 +1,14 @@
 import Link from 'next/link';
 import type { Suite } from '@core/types';
-
-async function getSuites(): Promise<Suite[]> {
-  try {
-    const res = await fetch('http://localhost:3000/api/suites', { cache: 'no-store' });
-    if (!res.ok) return [];
-    return (await res.json()) as Suite[];
-  } catch {
-    return [];
-  }
-}
+import { getContainer, LOCAL_OWNER } from '@app/lib/container';
 
 export default async function HomePage() {
-  const suites = await getSuites();
+  let suites: Suite[];
+  try {
+    suites = getContainer().repo.listSuites(LOCAL_OWNER);
+  } catch {
+    suites = [];
+  }
 
   return (
     <main style={{ maxWidth: 800, margin: '0 auto', padding: '32px 20px' }}>

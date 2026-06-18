@@ -1,4 +1,5 @@
 import { toolUseMetrics } from './tooluse-metrics';
+import type { VirtualToolDef } from '../types';
 
 const schema = {
   type: 'object',
@@ -72,6 +73,57 @@ test('empty calls list → entropy 0, conformance 0 (division guard)', () => {
   const m = toolUseMetrics({ calls: [] });
   expect(m.toolSelectionEntropy).toBe(0);
   expect(m.argumentSchemaConformanceRate).toBeNaN(); // 0/0, acceptable — no calls
+});
+
+test('tools[] path: per-call schema resolution yields non-zero conformance for valid args', () => {
+  const tools: VirtualToolDef[] = [
+    {
+      name: 'get_weather',
+      description: 'Get weather',
+      parameters: {
+        type: 'object',
+        required: ['loc'],
+        properties: { loc: { type: 'string' } },
+      },
+    },
+  ];
+  const m = toolUseMetrics({
+    expectedTool: 'get_weather',
+    tools,
+    calls: [
+      { name: 'get_weather', argumentsRaw: '{"loc":"TP"}', argumentsParsed: { loc: 'TP' } },
+      { name: 'get_weather', argumentsRaw: '{"loc":"NY"}', argumentsParsed: { loc: 'NY' } },
+      // call to a tool not in tools[] → non-conformant
+      { name: 'search', argumentsRaw: '{}', argumentsParsed: {} },
+    ],
+  });
+  // 2 of 3 calls have a schema (get_weather) AND valid args → 2/3
+  expect(m.argumentSchemaConformanceRate).toBeCloseTo(2 / 3);
+  expect(m.argumentSchemaConformanceRate).toBeGreaterThan(0);
+  // hit rate still works
+  expect(m.toolSelectionHitRate).toBeCloseTo(2 / 3);
+});
+
+test('tools[] path: invalid args → non-conformant even when schema found', () => {
+  const tools: VirtualToolDef[] = [
+    {
+      name: 'get_weather',
+      description: 'Get weather',
+      parameters: {
+        type: 'object',
+        required: ['loc'],
+        properties: { loc: { type: 'string' } },
+      },
+    },
+  ];
+  const m = toolUseMetrics({
+    tools,
+    calls: [
+      // missing required 'loc' → invalid
+      { name: 'get_weather', argumentsRaw: '{}', argumentsParsed: {} },
+    ],
+  });
+  expect(m.argumentSchemaConformanceRate).toBe(0);
 });
 
 test('argumentExactMatch absent when expected.arguments not given', () => {
