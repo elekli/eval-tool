@@ -210,8 +210,12 @@ export class SQLiteRepo implements Repository {
     return row ? this.rowToDataset(row) : null;
   }
 
+  // Newest first (rowid DESC) so callers like the suite-page dataset picker
+  // default to the most recently created dataset rather than the oldest.
   listDatasets(ownerId: string): Dataset[] {
-    const stmt = this.db.prepare<[string], DatasetRow>('SELECT * FROM datasets WHERE owner_id = ?');
+    const stmt = this.db.prepare<[string], DatasetRow>(
+      'SELECT * FROM datasets WHERE owner_id = ? ORDER BY rowid DESC',
+    );
     return stmt.all(ownerId).map(r => this.rowToDataset(r));
   }
 

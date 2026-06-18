@@ -36,6 +36,13 @@ test('listDatasets filters by owner', () => {
   expect(r.listDatasets('local').map(d => d.id)).toEqual(['d-local']);
 });
 
+test('listDatasets returns newest first', () => {
+  const r = repo();
+  r.createDataset({ id: 'd-old', ownerId: 'local', name: 'old', source: 'manual', createdAt: 1 }, []);
+  r.createDataset({ id: 'd-new', ownerId: 'local', name: 'new', source: 'manual', createdAt: 2 }, []);
+  expect(r.listDatasets('local').map(d => d.id)).toEqual(['d-new', 'd-old']);
+});
+
 test('createDataset + listTestCases round-trips vars + expected', () => {
   const r = repo();
   r.createDataset(
