@@ -1,5 +1,9 @@
 # TODOS
 
+## Code refinements (deferred from review)
+
+- **OpenRouter client — malformed 2xx body is retried**(Chunk 2 code-quality minor):`core/runner/openrouter-client.ts` 在 200 回應但 `response.json()` 解析失敗時,落入泛用 catch 被歸類成 network error → 重試(對非冪等 LLM 呼叫重送)。罕見且最終會 loudly 失敗,非阻擋。修法:對 2xx-壞body 給一個具名的 `ParseError`(不重試),符合「every error has a name」。
+
 ## Deferred tasks
 
 - **Port pair-watch → herdr**(獨立小任務,需自己的 spec)
