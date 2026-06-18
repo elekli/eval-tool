@@ -10,6 +10,14 @@ interface GeneratedCasesResponse {
   cases: GeneratedCase[];
 }
 
+/** Raised when a language's generation response can't be parsed or has the wrong shape. */
+export class DatasetGeneratorError extends Error {
+  name = 'DatasetGeneratorError' as const;
+  constructor(message: string) {
+    super(message);
+  }
+}
+
 export class DatasetGenerator {
   private client: OpenRouterClient;
 
@@ -61,8 +69,34 @@ export class DatasetGenerator {
         },
       });
 
-      const content = response.choices[0]?.message?.content ?? '{}';
-      const parsed = JSON.parse(content) as GeneratedCasesResponse;
+      const content = response.choices[0]?.message?.content;
+      if (content == null || content === '') {
+        throw new DatasetGeneratorError(
+          `Empty generation response for LANG=${lang} (model returned no content; possibly refused or content-filtered)`,
+        );
+      }
+
+      let parsed: GeneratedCasesResponse;
+      try {
+        parsed = JSON.parse(content) as GeneratedCasesResponse;
+      } catch (err) {
+        const reason = err instanceof Error ? err.message : String(err);
+        throw new DatasetGeneratorError(
+          `Failed to parse generation response for LANG=${lang}: ${reason}. Raw content: ${content.slice(0, 200)}`,
+        );
+      }
+
+      if (!Array.isArray(parsed.cases)) {
+        throw new DatasetGeneratorError(
+          `Generation response for LANG=${lang} has no "cases" array (got ${typeof parsed.cases})`,
+        );
+      }
+
+      if (parsed.cases.length !== countPerLang) {
+        throw new DatasetGeneratorError(
+          `Generation for LANG=${lang} returned ${parsed.cases.length} cases, expected ${countPerLang}`,
+        );
+      }
 
       for (const caseObj of parsed.cases) {
         allCases.push({
