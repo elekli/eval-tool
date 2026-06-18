@@ -23,6 +23,19 @@ test('getSuite returns null when absent', () => {
   expect(repo().getSuite('nope')).toBeNull();
 });
 
+test('listDatasets filters by owner', () => {
+  const r = repo();
+  r.createDataset(
+    { id: 'd-local', ownerId: 'local', name: 'mine', source: 'manual', createdAt: 1 },
+    []
+  );
+  r.createDataset(
+    { id: 'd-other', ownerId: 'other', name: 'theirs', source: 'manual', createdAt: 2 },
+    []
+  );
+  expect(r.listDatasets('local').map(d => d.id)).toEqual(['d-local']);
+});
+
 test('createDataset + listTestCases round-trips vars + expected', () => {
   const r = repo();
   r.createDataset(

@@ -27,7 +27,7 @@ const CreateDatasetSchema = z.object({
   cases: z.array(TestCaseSchema),
 });
 
-export async function GET(): Promise<Response> {
+export async function GET(_req: Request): Promise<Response> {
   try {
     const container = getContainer();
     const datasets = container.repo.listDatasets(LOCAL_OWNER);

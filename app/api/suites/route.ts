@@ -32,7 +32,7 @@ const CreateSuiteSchema = z.object({
   runConfig: RunConfigSchema,
 });
 
-export async function GET(): Promise<Response> {
+export async function GET(_req: Request): Promise<Response> {
   try {
     const container = getContainer();
     const suites = container.repo.listSuites(LOCAL_OWNER);

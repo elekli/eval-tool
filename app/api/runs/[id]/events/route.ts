@@ -14,6 +14,8 @@ export async function GET(
   if (!run) return Response.json({ error: 'Not found' }, { status: 404 });
   if (run.ownerId !== LOCAL_OWNER) return Response.json({ error: 'Not found' }, { status: 404 });
 
+  let cancelled = false;
+
   const stream = new ReadableStream({
     async start(controller) {
       const encode = (data: unknown) => {
@@ -22,6 +24,8 @@ export async function GET(
       };
 
       const poll = async () => {
+        if (cancelled) return;
+
         const currentRun = container.repo.getRun(id);
         if (!currentRun) {
           encode({ error: 'Run disappeared' });
@@ -42,6 +46,7 @@ export async function GET(
       };
 
       await poll().catch((err) => {
+        if (cancelled) return;
         try {
           encode({ error: String(err) });
           controller.close();
@@ -49,6 +54,9 @@ export async function GET(
           // stream already closed
         }
       });
+    },
+    cancel() {
+      cancelled = true;
     },
   });
 

@@ -6,4 +6,9 @@ export default tseslint.config(
   {
     ignores: ['.next/**', 'node_modules/**', 'next-env.d.ts'],
   },
+  {
+    rules: {
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+    },
+  },
 );
