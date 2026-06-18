@@ -24,12 +24,15 @@ test('judge returns score + reasoning from structured output', async () => {
             finish_reason: 'stop',
           },
         ],
-        usage: {},
+        usage: { prompt_tokens: 10, completion_tokens: 5, cost: 0.001 },
       }),
     ),
   );
-  const v = await judge.evaluate(cfg, payload);
-  expect(v).toEqual({ score: 4, reasoning: '簡潔且同語言' });
+  const result = await judge.evaluate(cfg, payload);
+  expect(result.verdict).toEqual({ score: 4, reasoning: '簡潔且同語言' });
+  expect(result.usage.promptTokens).toBe(10);
+  expect(result.usage.completionTokens).toBe(5);
+  expect(result.usage.costUsd).toBeCloseTo(0.001);
 });
 
 test('judge throws named error on unparseable output', async () => {

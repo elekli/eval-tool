@@ -1,5 +1,10 @@
 import type { OpenRouterClient } from '../runner/openrouter-client';
-import type { JudgeConfig, JudgeVerdict } from '../types';
+import type { JudgeConfig, JudgeVerdict, Usage } from '../types';
+
+export interface JudgeResult {
+  verdict: JudgeVerdict;
+  usage: Usage;
+}
 
 export class JudgeParseError extends Error {
   name = 'JudgeParseError' as const;
@@ -20,7 +25,7 @@ export class Judge {
   async evaluate(
     judgeConfig: JudgeConfig,
     payload: { input: Record<string, unknown>; output: string },
-  ): Promise<JudgeVerdict> {
+  ): Promise<JudgeResult> {
     const prompt = [
       'You are an impartial evaluator. Given the rubric below, score the model output.',
       '',
@@ -77,6 +82,13 @@ export class Judge {
     }
 
     const { score, reasoning } = parsed as { score: number; reasoning: string };
-    return { score, reasoning };
+
+    const usage: Usage = {
+      promptTokens: response.usage.prompt_tokens ?? 0,
+      completionTokens: response.usage.completion_tokens ?? 0,
+      costUsd: response.usage.cost ?? undefined,
+    };
+
+    return { verdict: { score, reasoning }, usage };
   }
 }
