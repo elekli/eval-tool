@@ -11,7 +11,8 @@ export async function GET(
     if (!run) return Response.json({ error: 'Not found' }, { status: 404 });
     if (run.ownerId !== LOCAL_OWNER) return Response.json({ error: 'Not found' }, { status: 404 });
     const results = container.repo.listResults(id);
-    return Response.json({ run, results });
+    const cases = container.repo.listTestCases(run.datasetId);
+    return Response.json({ run, results, cases });
   } catch (err) {
     return Response.json({ error: String(err) }, { status: 500 });
   }

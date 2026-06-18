@@ -157,9 +157,11 @@ describe('GET /api/runs/[id]', () => {
       { params: Promise.resolve({ id: runId }) },
     );
     expect(res.status).toBe(200);
-    const data = await res.json() as { run: { id: string }; results: unknown[] };
+    const data = await res.json() as { run: { id: string }; results: unknown[]; cases: unknown[] };
     expect(data.run.id).toBe(runId);
     expect(Array.isArray(data.results)).toBe(true);
+    expect(Array.isArray(data.cases)).toBe(true);
+    expect(data.cases.length).toBeGreaterThan(0);
   });
 
   test('returns 404 for non-existent run', async () => {
@@ -168,6 +170,36 @@ describe('GET /api/runs/[id]', () => {
       { params: Promise.resolve({ id: 'nonexistent' }) },
     );
     expect(res.status).toBe(404);
+  });
+
+  test('response includes cases from the dataset', async () => {
+    mockOpenRouterText();
+    const { id: suiteId } = await createSuite();
+    const { dataset } = await createDataset();
+
+    const postRes = await POSTRun(
+      new Request('http://localhost/api/runs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ suiteId, datasetId: dataset.id }),
+      }),
+    );
+    const { id: runId } = await postRes.json() as { id: string };
+
+    const res = await GETRun(
+      new Request(`http://localhost/api/runs/${runId}`),
+      { params: Promise.resolve({ id: runId }) },
+    );
+    expect(res.status).toBe(200);
+    const data = await res.json() as { run: { id: string }; results: unknown[]; cases: Array<{ id: string; vars: Record<string, unknown> }> };
+    expect(Array.isArray(data.cases)).toBe(true);
+    // Dataset was created with 2 cases
+    expect(data.cases.length).toBe(2);
+    // Each case should carry vars
+    for (const c of data.cases) {
+      expect(typeof c.id).toBe('string');
+      expect(typeof c.vars).toBe('object');
+    }
   });
 });
 

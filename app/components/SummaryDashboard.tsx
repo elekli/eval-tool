@@ -112,6 +112,9 @@ export function SummaryDashboard({ summary, onCaseClick, activeCaseId }: Props) 
                   <tr
                     key={cs.testCaseId}
                     onClick={() => onCaseClick(cs)}
+                    tabIndex={0}
+                    role="button"
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onCaseClick(cs); } }}
                     style={{
                       borderBottom: '1px solid #e5e7eb',
                       background: isActive ? '#eff6ff' : 'transparent',
@@ -166,7 +169,7 @@ export function SummaryDashboard({ summary, onCaseClick, activeCaseId }: Props) 
 
               {cases.length === 0 && (
                 <tr>
-                  <td colSpan={7} style={{ ...tdStyle, color: '#9ca3af', textAlign: 'center', padding: 24, fontStyle: 'italic' }}>
+                  <td colSpan={type === 'tool_use' ? 7 : 6} style={{ ...tdStyle, color: '#9ca3af', textAlign: 'center', padding: 24, fontStyle: 'italic' }}>
                     No cases yet.
                   </td>
                 </tr>

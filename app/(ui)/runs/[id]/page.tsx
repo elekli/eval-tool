@@ -25,37 +25,57 @@ export default function RunPage() {
   const [error, setError] = useState<string | null>(null);
 
   const esRef = useRef<EventSource | null>(null);
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Cache of results and cases fetched during initialize/refresh — used by loadResults
+  const resultsCache = useRef<Result[]>([]);
+  const casesCache = useRef<TestCase[]>([]);
 
   useEffect(() => {
-    void initialize();
+    let cancelled = false;
+
+    void initialize(cancelled, (v) => { if (!cancelled) setRun(v); }, (v) => { if (!cancelled) setSummary(v); }, (v) => { if (!cancelled) setLoading(v); }, (v) => { if (!cancelled) setError(v); });
+
     return () => {
+      cancelled = true;
       esRef.current?.close();
-      if (pollingRef.current) clearInterval(pollingRef.current);
     };
   }, [id]);
 
-  async function initialize() {
-    setLoading(true);
+  async function initialize(
+    cancelled: boolean,
+    _setRun: (r: Run) => void,
+    _setSummary: (s: Summary) => void,
+    _setLoading: (v: boolean) => void,
+    _setError: (e: string) => void,
+  ) {
+    _setLoading(true);
     try {
       const [runRes, summaryRes] = await Promise.all([
         fetch(`/api/runs/${id}`),
         fetch(`/api/runs/${id}/summary`),
       ]);
       if (!runRes.ok) throw new Error('Run not found');
-      const { run: r } = (await runRes.json()) as { run: Run; results: Result[] };
+      if (!summaryRes.ok) throw new Error(`Summary fetch failed: HTTP ${summaryRes.status}`);
+
+      const { run: r, results, cases } = (await runRes.json()) as { run: Run; results: Result[]; cases: TestCase[] };
       const s = (await summaryRes.json()) as Summary;
-      setRun(r);
-      setSummary(s);
+
+      // Cache for loadResults usage — no second network fetch needed
+      resultsCache.current = results;
+      casesCache.current = cases;
+
+      if (!cancelled) {
+        _setRun(r);
+        _setSummary(s);
+      }
 
       // If still running, subscribe to SSE events
-      if (r.status === 'running' || r.status === 'queued') {
+      if ((r.status === 'running' || r.status === 'queued') && !cancelled) {
         subscribeSSE();
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      if (!cancelled) _setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setLoading(false);
+      if (!cancelled) _setLoading(false);
     }
   }
 
@@ -87,8 +107,13 @@ export default function RunPage() {
         fetch(`/api/runs/${id}/summary`),
       ]);
       if (!runRes.ok) return;
-      const { run: r } = (await runRes.json()) as { run: Run; results: Result[] };
+      const { run: r, results, cases } = (await runRes.json()) as { run: Run; results: Result[]; cases: TestCase[] };
       const s = (await summaryRes.json()) as Summary;
+
+      // Update caches
+      resultsCache.current = results;
+      casesCache.current = cases;
+
       setRun(r);
       setSummary(s);
     } catch {
@@ -96,27 +121,14 @@ export default function RunPage() {
     }
   }
 
-  async function loadResults(testCaseId: string): Promise<{ testCase: TestCase; results: Result[] }> {
-    const res = await fetch(`/api/runs/${id}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const { results } = (await res.json()) as { run: Run; results: Result[] };
-    const caseResults = results.filter((r) => r.testCaseId === testCaseId);
-
-    // We need the test case — fetch from summary since we already have the label
-    // For the full vars, we fetch the run detail again (results don't include vars)
-    // Actually the /api/runs/:id endpoint only returns run + results.
-    // We need to get the test case from the dataset. Build a minimal one from caseId.
-    // NOTE: the API doesn't expose a single test-case endpoint, so we'll derive it
-    // from the summary's cases list. The full vars must come from somewhere...
-    // The current API design doesn't have a standalone /api/datasets/:id/cases endpoint.
-    // We'll fetch the dataset cases indirectly through the run's datasetId.
-    const testCase: TestCase = {
+  function loadResults(testCaseId: string): Promise<{ testCase: TestCase; results: Result[] }> {
+    const caseResults = resultsCache.current.filter((r) => r.testCaseId === testCaseId);
+    const testCase = casesCache.current.find((c) => c.id === testCaseId) ?? {
       id: testCaseId,
-      datasetId: '',   // not critical for display
-      vars: {},        // will be populated below if we can get it
+      datasetId: '',
+      vars: {},
     };
-
-    return { testCase, results: caseResults };
+    return Promise.resolve({ testCase, results: caseResults });
   }
 
   if (loading) {
