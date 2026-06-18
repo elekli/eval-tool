@@ -12,15 +12,15 @@ test('generates countPerLang cases per language', async () => {
     const body = await request.json() as { messages: Array<{ content: string }> };
     const lang = body.messages.at(-1)?.content.match(/LANG=(\w+)/)?.[1];
     return HttpResponse.json({ choices: [{ message: { content: JSON.stringify({
-      cases: [{ article: `${lang}-1` }, { article: `${lang}-2` }] }) }, finish_reason: 'stop' }], usage: {} });
+      cases: [{ input: `${lang}-1` }, { input: `${lang}-2` }] }) }, finish_reason: 'stop' }], usage: {} });
   }));
   const cases = await generator.generate(
     { languages: ['en','ja'], countPerLang: 2, lengthWords: 50, topic: 'World Cup' }, 'dataset-1');
   expect(cases).toHaveLength(4);
   expect(cases.every(c => c.datasetId === 'dataset-1')).toBe(true);
-  // each language was actually called with its own LANG marker (mock echoes lang into article)
-  const articles = cases.map((c) => c.vars.article);
-  expect(articles).toEqual(['en-1', 'en-2', 'ja-1', 'ja-2']);
+  // each language was actually called with its own LANG marker (mock echoes lang into input)
+  const inputs = cases.map((c) => c.vars.input);
+  expect(inputs).toEqual(['en-1', 'en-2', 'ja-1', 'ja-2']);
 });
 
 test('throws named error when response content is not JSON', async () => {
@@ -41,7 +41,7 @@ test('throws named error when response has no cases array', async () => {
 
 test('throws named error when language returns fewer cases than requested', async () => {
   server.use(http.post(URL, () => HttpResponse.json({
-    choices: [{ message: { content: JSON.stringify({ cases: [{ article: 'only-one' }] }) },
+    choices: [{ message: { content: JSON.stringify({ cases: [{ input: 'only-one' }] }) },
       finish_reason: 'stop' }], usage: {} })));
   await expect(generator.generate(
     { languages: ['en'], countPerLang: 2, lengthWords: 50, topic: 'x' }, 'dataset-1'),

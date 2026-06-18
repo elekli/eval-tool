@@ -16,6 +16,7 @@ export interface Repository {
   // runs + results
   createRun(r: Run): void;
   getRun(id: string): Run | null;
+  listRunsBySuite(suiteId: string): Run[];
   updateRun(r: Run): void;
   insertResult(r: Result): void;
   listResults(runId: string): Result[];

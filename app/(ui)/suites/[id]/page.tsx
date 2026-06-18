@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import type { Suite, Dataset } from '@core/types';
+import type { Suite, Dataset, Run } from '@core/types';
 import { SuiteForm } from '@app/components/SuiteForm';
 import { DatasetGenerator } from '@app/components/DatasetGenerator';
 
@@ -14,6 +14,7 @@ export default function SuitePage() {
 
   const [suite, setSuite] = useState<Suite | null>(null);
   const [datasets, setDatasets] = useState<Dataset[]>([]);
+  const [runs, setRuns] = useState<Run[]>([]);
   const [selectedDatasetId, setSelectedDatasetId] = useState('');
   const [launching, setLaunching] = useState(false);
   const [runError, setRunError] = useState<string | null>(null);
@@ -28,15 +29,18 @@ export default function SuitePage() {
   async function loadData() {
     setLoading(true);
     try {
-      const [suiteRes, datasetsRes] = await Promise.all([
+      const [suiteRes, datasetsRes, runsRes] = await Promise.all([
         fetch(`/api/suites/${id}`),
         fetch('/api/datasets'),
+        fetch(`/api/runs?suiteId=${id}`),
       ]);
       if (!suiteRes.ok) throw new Error('Suite not found');
       const s = (await suiteRes.json()) as Suite;
       const ds = (await datasetsRes.json()) as Dataset[];
+      const rs = runsRes.ok ? ((await runsRes.json()) as Run[]) : [];
       setSuite(s);
       setDatasets(ds);
+      setRuns(rs);
       if (ds.length > 0 && ds[0]) setSelectedDatasetId(ds[0].id);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -143,6 +147,40 @@ export default function SuitePage() {
         )}
       </section>
 
+      {/* Past runs */}
+      <section style={card}>
+        <h2 style={sectionH}>Runs</h2>
+        {runs.length === 0 ? (
+          <p style={{ color: '#9ca3af', fontSize: 13, fontStyle: 'italic', margin: 0 }}>
+            No runs yet. Launch one above.
+          </p>
+        ) : (
+          <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+            {runs.map((r) => (
+              <li
+                key={r.id}
+                style={{
+                  padding: '8px 0',
+                  borderBottom: '1px solid #f3f4f6',
+                  fontSize: 13,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                }}
+              >
+                <Link href={`/runs/${r.id}`} style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 500 }}>
+                  View results →
+                </Link>
+                <span style={statusBadge(r.status)}>{r.status}</span>
+                <span style={{ fontSize: 12, color: '#9ca3af', flex: 1, textAlign: 'right' }}>
+                  {r.startedAt ? new Date(r.startedAt).toLocaleString() : 'queued'}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       {/* Dataset section */}
       <section style={card}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -214,3 +252,23 @@ const sectionH: React.CSSProperties = {
   color: '#1f2937',
   margin: '0 0 12px',
 };
+
+function statusBadge(status: Run['status']): React.CSSProperties {
+  const palette: Record<Run['status'], { bg: string; fg: string }> = {
+    queued: { bg: '#f3f4f6', fg: '#6b7280' },
+    running: { bg: '#dbeafe', fg: '#1d4ed8' },
+    done: { bg: '#dcfce7', fg: '#15803d' },
+    error: { bg: '#fee2e2', fg: '#b91c1c' },
+  };
+  const { bg, fg } = palette[status];
+  return {
+    background: bg,
+    color: fg,
+    borderRadius: 4,
+    padding: '2px 8px',
+    fontSize: 11,
+    fontWeight: 600,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  };
+}

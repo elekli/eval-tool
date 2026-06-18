@@ -1,10 +1,7 @@
 import type { TargetConfig, TestCase, ToolCall, Usage } from '../types';
 import type { OpenRouterClient } from './openrouter-client';
 import type { ExecutionRecord, Runner } from './runner';
-
-function renderTemplate(tpl: string, vars: Record<string, string>): string {
-  return tpl.replace(/\{\{(\w+)\}\}/g, (_, key: string) => vars[key] ?? '');
-}
+import { renderTemplate } from './template';
 
 export class OpenRouterRunner implements Runner {
   constructor(private client: OpenRouterClient) {}

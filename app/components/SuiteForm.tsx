@@ -179,7 +179,7 @@ export function SuiteForm({ initial, onSaved }: Props) {
           placeholder="{{input}}"
         />
         <span style={{ color: '#6b7280', fontSize: 12 }}>
-          Use {'{{varName}}'} to reference dataset variables.
+          Use {'{{varName}}'} to reference dataset variables. Generated datasets expose the content as {'{{input}}'}.
         </span>
       </label>
 

@@ -2,7 +2,7 @@ import { beforeEach, afterEach, describe, test, expect } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { server } from '../../../test/setup';
 import { createContainer, setContainer, resetContainer } from '@app/lib/container';
-import { POST as POSTRun } from './route';
+import { POST as POSTRun, GET as GETRuns } from './route';
 import { GET as GETRun } from './[id]/route';
 import { GET as GETSummary } from './[id]/summary/route';
 import { POST as POSTSuite } from '../suites/route';
@@ -133,6 +133,69 @@ describe('POST /api/runs', () => {
         body: JSON.stringify({ suiteId: 'nonexistent', datasetId: dataset.id }),
       }),
     );
+    expect(res.status).toBe(400);
+  });
+
+  test('returns 400 when template var is absent from the dataset (no API spend)', async () => {
+    // Suite template references {{article}}, but this dataset only provides {{input}}.
+    let openrouterCalled = false;
+    server.use(http.post(OPENROUTER_URL, () => { openrouterCalled = true; return HttpResponse.json({}); }));
+    const { id: suiteId } = await createSuite(); // template: {{article}}
+    const res = await POSTDataset(
+      new Request('http://localhost/api/datasets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'Mismatch Dataset',
+          source: 'manual',
+          cases: [{ vars: { input: 'content with the wrong var name' } }],
+        }),
+      }),
+    );
+    const { dataset } = await res.json() as { dataset: { id: string } };
+
+    const runRes = await POSTRun(
+      new Request('http://localhost/api/runs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ suiteId, datasetId: dataset.id }),
+      }),
+    );
+    expect(runRes.status).toBe(400);
+    const data = await runRes.json() as { error: string };
+    expect(data.error).toContain('article');
+    expect(data.error).toContain('input');
+    expect(openrouterCalled).toBe(false);
+  });
+});
+
+describe('GET /api/runs?suiteId=', () => {
+  test('lists runs for a suite, newest first', async () => {
+    mockOpenRouterText();
+    const { id: suiteId } = await createSuite();
+    const { dataset } = await createDataset();
+
+    async function launch() {
+      const res = await POSTRun(
+        new Request('http://localhost/api/runs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ suiteId, datasetId: dataset.id }),
+        }),
+      );
+      return (await res.json() as { id: string }).id;
+    }
+    const first = await launch();
+    const second = await launch();
+
+    const listRes = GETRuns(new Request(`http://localhost/api/runs?suiteId=${suiteId}`));
+    expect(listRes.status).toBe(200);
+    const runs = await listRes.json() as Array<{ id: string }>;
+    expect(runs.map((r) => r.id)).toEqual([second, first]);
+  });
+
+  test('returns 400 without suiteId', async () => {
+    const res = GETRuns(new Request('http://localhost/api/runs'));
     expect(res.status).toBe(400);
   });
 });

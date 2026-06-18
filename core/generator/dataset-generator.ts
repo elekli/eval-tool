@@ -2,7 +2,7 @@ import type { GenSpec, TestCase } from '../types';
 import type { OpenRouterClient } from '../runner/openrouter-client';
 
 interface GeneratedCase {
-  article: string;
+  input: string;
   [key: string]: string;
 }
 
@@ -37,7 +37,7 @@ export class DatasetGenerator {
         `Topic: ${topic}`,
         `Each article should be approximately ${lengthWords} words.`,
         extra ? `Additional instructions: ${extra}` : null,
-        `Return a JSON object with a "cases" array, each element having an "article" field.`,
+        `Return a JSON object with a "cases" array, each element having an "input" field holding the content.`,
       ]
         .filter(Boolean)
         .join('\n');
@@ -57,9 +57,9 @@ export class DatasetGenerator {
                   type: 'array',
                   items: {
                     type: 'object',
-                    required: ['article'],
+                    required: ['input'],
                     properties: {
-                      article: { type: 'string' },
+                      input: { type: 'string' },
                     },
                   },
                 },

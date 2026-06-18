@@ -240,6 +240,15 @@ export class SQLiteRepo implements Repository {
     return row ? this.rowToRun(row) : null;
   }
 
+  // Newest first. The runs table has no created_at column, so we order by rowid,
+  // which is monotonic in insertion order (createRun is the only insert path).
+  listRunsBySuite(suiteId: string): Run[] {
+    const stmt = this.db.prepare<[string], RunRow>(
+      'SELECT * FROM runs WHERE suite_id = ? ORDER BY rowid DESC',
+    );
+    return stmt.all(suiteId).map((r) => this.rowToRun(r));
+  }
+
   updateRun(r: Run): void {
     const stmt = this.db.prepare(
       `UPDATE runs SET owner_id=?, suite_id=?, dataset_id=?, status=?, n_repeats=?,

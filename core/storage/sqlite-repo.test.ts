@@ -60,6 +60,18 @@ test('insertResult + listResults preserves toolCalls + usage', () => {
   expect(got[0]?.usage).toEqual({ promptTokens: 10, completionTokens: 2 });
 });
 
+test('listRunsBySuite returns only that suite\'s runs, newest first', () => {
+  const r = repo();
+  const base = { ownerId: 'local', datasetId: 'd1', status: 'done' as const,
+    nRepeats: 1, startedAt: 1, finishedAt: 2, error: null };
+  r.createRun({ ...base, id: 'r1', suiteId: 's1' });
+  r.createRun({ ...base, id: 'r2', suiteId: 's1' });
+  r.createRun({ ...base, id: 'r3', suiteId: 'other' });
+  // newest first (rowid DESC): r2 before r1; r3 excluded
+  expect(r.listRunsBySuite('s1').map((x) => x.id)).toEqual(['r2', 'r1']);
+  expect(r.listRunsBySuite('none')).toEqual([]);
+});
+
 // Fix 3: absent optional fields on Result should round-trip as undefined, not null/"null"
 test('minimal error result: absent optional fields come back undefined', () => {
   const r = repo();
