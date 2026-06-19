@@ -6,6 +6,7 @@ import Link from 'next/link';
 import type { Suite, Dataset, Run } from '@core/types';
 import { SuiteForm } from '@app/components/SuiteForm';
 import { DatasetGenerator } from '@app/components/DatasetGenerator';
+import { ManualDatasetEditor } from '@app/components/ManualDatasetEditor';
 
 export default function SuitePage() {
   const params = useParams<{ id: string }>();
@@ -21,6 +22,7 @@ export default function SuitePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showGenerator, setShowGenerator] = useState(false);
+  const [showManual, setShowManual] = useState(false);
 
   useEffect(() => {
     void loadData();
@@ -76,6 +78,7 @@ export default function SuitePage() {
     setDatasets((prev) => [...prev, ds]);
     setSelectedDatasetId(ds.id);
     setShowGenerator(false);
+    setShowManual(false);
   }
 
   if (loading) {
@@ -185,18 +188,33 @@ export default function SuitePage() {
       <section style={card}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <h2 style={{ ...sectionH, marginBottom: 0 }}>Datasets</h2>
-          <button
-            type="button"
-            onClick={() => setShowGenerator((v) => !v)}
-            style={{ color: '#2563eb', background: 'none', border: '1px solid #93c5fd', borderRadius: 4, padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}
-          >
-            {showGenerator ? 'Cancel' : '+ Generate Dataset'}
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              type="button"
+              onClick={() => { setShowGenerator((v) => !v); setShowManual(false); }}
+              style={{ color: '#2563eb', background: 'none', border: '1px solid #93c5fd', borderRadius: 4, padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}
+            >
+              {showGenerator ? 'Cancel' : '+ Generate Dataset'}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setShowManual((v) => !v); setShowGenerator(false); }}
+              style={{ color: '#2563eb', background: 'none', border: '1px solid #93c5fd', borderRadius: 4, padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}
+            >
+              {showManual ? 'Cancel' : '+ Add Manual Dataset'}
+            </button>
+          </div>
         </div>
 
         {showGenerator && (
           <div style={{ marginBottom: 16, background: '#f9fafb', borderRadius: 6, padding: 16 }}>
             <DatasetGenerator onSaved={handleDatasetSaved} />
+          </div>
+        )}
+
+        {showManual && (
+          <div style={{ marginBottom: 16, background: '#f9fafb', borderRadius: 6, padding: 16 }}>
+            <ManualDatasetEditor suite={suite} onSaved={handleDatasetSaved} />
           </div>
         )}
 
